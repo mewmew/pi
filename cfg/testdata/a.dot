@@ -1,0 +1,8 @@
+digraph G {
+	// Node definitions.
+	A [label=entry];
+	B;
+
+	// Edge definitions.
+	A -> B;
+}
