@@ -484,7 +484,7 @@ func (a Attrs) Attributes() []encoding.Attribute {
 		// Quote label string if containing spaces.
 		if key == "label" {
 			s := attr.Value
-			if strings.Contains(s, " ") && !strings.HasPrefix(s, `"`) {
+			if strings.ContainsAny(s, " %") && !strings.HasPrefix(s, `"`) {
 				attr.Value = strconv.Quote(s)
 			}
 		}
