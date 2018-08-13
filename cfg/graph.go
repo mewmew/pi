@@ -69,16 +69,21 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 		case *ir.TermCondBr:
 			t := nodeWithName(g, term.TargetTrue.Name)
 			f := nodeWithName(g, term.TargetFalse.Name)
-			edgeWithLabel(g, from, t, "true")
-			edgeWithLabel(g, from, f, "false")
+			trueCond := term.Cond.Ident()
+			falseCond := fmt.Sprintf("!%v", trueCond)
+			edgeWithLabel(g, from, t, trueCond)
+			edgeWithLabel(g, from, f, falseCond)
 		case *ir.TermSwitch:
+			var defaultConds []string
 			for _, c := range term.Cases {
 				to := nodeWithName(g, c.Target.Name)
-				label := fmt.Sprintf("case (x=%v)", c.X.Ident())
-				edgeWithLabel(g, from, to, label)
+				caseCond := fmt.Sprintf("%v == %v", term.X.Ident(), c.X.Ident())
+				edgeWithLabel(g, from, to, caseCond)
+				defaultConds = append(defaultConds, fmt.Sprintf("%v != %v", term.X.Ident(), c.X.Ident()))
 			}
 			to := nodeWithName(g, term.TargetDefault.Name)
-			edgeWithLabel(g, from, to, "default case")
+			defaultCond := strings.Join(defaultConds, " && ")
+			edgeWithLabel(g, from, to, defaultCond)
 		case *ir.TermUnreachable:
 			// nothing to do.
 		default:
@@ -105,10 +110,10 @@ func edgeWithLabel(g *Graph, from, to *Node, label string) *Edge {
 	e := edge(g.NewEdge(from, to))
 	if len(label) > 0 {
 		e.Attrs["label"] = label
-		switch label {
-		case "true":
+		switch {
+		case strings.HasPrefix(label, "%"):
 			e.Attrs["color"] = "darkgreen"
-		case "false":
+		case strings.HasPrefix(label, "!"):
 			e.Attrs["color"] = "red"
 		}
 	}
@@ -171,9 +176,9 @@ func (g *Graph) TrueTarget(n *Node) *Node {
 	e1Label := e1.Attrs["label"]
 	e2Label := e2.Attrs["label"]
 	switch {
-	case e1Label == "true" && e2Label == "false":
+	case strings.HasPrefix(e1Label, "%") && strings.HasPrefix(e2Label, "!"):
 		return succ1
-	case e1Label == "false" && e2Label == "true":
+	case strings.HasPrefix(e1Label, "!") && strings.HasPrefix(e2Label, "%"):
 		return succ2
 	default:
 		// TODO: Figure out how to track edges of true- and false-branches in
@@ -197,9 +202,9 @@ func (g *Graph) FalseTarget(n *Node) *Node {
 	e1Label := e1.Attrs["label"]
 	e2Label := e2.Attrs["label"]
 	switch {
-	case e1Label == "true" && e2Label == "false":
+	case strings.HasPrefix(e1Label, "%") && strings.HasPrefix(e2Label, "!"):
 		return succ2
-	case e1Label == "false" && e2Label == "true":
+	case strings.HasPrefix(e1Label, "!") && strings.HasPrefix(e2Label, "%"):
 		return succ1
 	default:
 		// TODO: Figure out how to track edges of true- and false-branches in
