@@ -11,6 +11,7 @@ import (
 
 	"github.com/graphism/simple"
 	"github.com/llir/llvm/ir"
+	"github.com/llir/llvm/ir/value"
 	"github.com/mewkiz/pkg/term"
 	"github.com/pkg/errors"
 	"gonum.org/v1/gonum/graph"
@@ -55,7 +56,7 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 	// Force generate local IDs.
 	_ = f.String()
 	for i, block := range f.Blocks {
-		from := nodeWithName(g, localIdent(block.LocalIdent))
+		from := nodeWithName(g, localIdent(block))
 		if i == 0 {
 			// Store entry node.
 			g.SetEntry(from)
@@ -64,24 +65,24 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 		case *ir.TermRet:
 			// nothing to do.
 		case *ir.TermBr:
-			to := nodeWithName(g, localIdent(term.Target.LocalIdent))
+			to := nodeWithName(g, localIdent(term.Target))
 			edgeWithLabel(g, from, to, "")
 		case *ir.TermCondBr:
-			t := nodeWithName(g, localIdent(term.TargetTrue.LocalIdent))
-			f := nodeWithName(g, localIdent(term.TargetFalse.LocalIdent))
-			trueCond := term.Cond.Ident()
+			t := nodeWithName(g, localIdent(term.TargetTrue))
+			f := nodeWithName(g, localIdent(term.TargetFalse))
+			trueCond := localIdent(term.Cond)
 			falseCond := fmt.Sprintf("!%v", trueCond)
 			edgeWithLabel(g, from, t, trueCond)
 			edgeWithLabel(g, from, f, falseCond)
 		case *ir.TermSwitch:
 			var defaultConds []string
 			for _, c := range term.Cases {
-				to := nodeWithName(g, localIdent(c.Target.LocalIdent))
-				caseCond := fmt.Sprintf("%v == %v", term.X.Ident(), c.X.Ident())
+				to := nodeWithName(g, localIdent(c.Target))
+				caseCond := fmt.Sprintf("%v == %v", localIdent(term.X), localIdent(c.X))
 				edgeWithLabel(g, from, to, caseCond)
-				defaultConds = append(defaultConds, fmt.Sprintf("%v != %v", term.X.Ident(), c.X.Ident()))
+				defaultConds = append(defaultConds, fmt.Sprintf("%v != %v", localIdent(term.X), localIdent(c.X)))
 			}
-			to := nodeWithName(g, localIdent(term.TargetDefault.LocalIdent))
+			to := nodeWithName(g, localIdent(term.TargetDefault))
 			defaultCond := strings.Join(defaultConds, " && ")
 			edgeWithLabel(g, from, to, defaultCond)
 		case *ir.TermUnreachable:
@@ -486,7 +487,7 @@ func (a Attrs) Attributes() []encoding.Attribute {
 		// Quote label string if containing spaces.
 		if key == "label" {
 			s := attr.Value
-			if strings.ContainsAny(s, " %") && !strings.HasPrefix(s, `"`) {
+			if strings.ContainsAny(s, " %!") && !strings.HasPrefix(s, `"`) {
 				attr.Value = strconv.Quote(s)
 			}
 		}
@@ -522,10 +523,13 @@ func (g *Graph) nodeWithName(name string) *Node {
 	return n
 }
 
-// localIdent returns the identifier (without '%' prefix) of the local
-// identifier.
-func localIdent(ident ir.LocalIdent) string {
-	const prefix = "%"
-	s := ident.Ident()
-	return s[len(prefix):]
+// localIdent returns the identifier (without '%' prefix) of the local variable.
+func localIdent(v value.Value) string {
+	switch v := v.(type) {
+	case value.Named:
+		ident := v.Ident()
+		const prefix = "%"
+		return ident[len(prefix):]
+	}
+	return v.Ident()
 }
