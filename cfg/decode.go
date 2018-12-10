@@ -38,7 +38,9 @@ func ParseBytes(b []byte) (*Graph, error) {
 	}
 	// Initialize mapping between node names and graph nodes.
 	g.initNodes()
-	for _, n := range g.Nodes() {
+	nodes := g.Nodes()
+	for nodes.Next() {
+		n := nodes.Node()
 		nn := node(n)
 		if nn.entry {
 			if g.entry != nil && nn != g.entry {

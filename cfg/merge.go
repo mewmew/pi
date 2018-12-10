@@ -20,14 +20,18 @@ func Merge(src *Graph, delNodes map[string]bool, newName string) *Graph {
 			newNode.entry = true
 		}
 		// Record predecessors not part of nodes.
-		for _, pred := range dst.To(delNode.ID()) {
+		to := dst.To(delNode.ID())
+		for to.Next() {
+			pred := to.Node()
 			p := node(pred)
 			if !delNodes[p.name] {
 				preds[dst.nodeWithName(p.name)] = edge(dst.Edge(p.ID(), delNode.ID())).Attrs
 			}
 		}
 		// Record successors not part of nodes.
-		for _, succ := range dst.From(delNode.ID()) {
+		from := dst.From(delNode.ID())
+		for from.Next() {
+			succ := from.Node()
 			s := node(succ)
 			if !delNodes[s.name] {
 				succs[dst.nodeWithName(s.name)] = true

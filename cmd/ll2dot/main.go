@@ -117,7 +117,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 	if llPath == "-" {
 		// Read from standard input.
 		dbg.Print("parsing LLVM IR from <stdin>.")
-		module, err = asm.Parse(os.Stdin)
+		module, err = asm.Parse("<stdin>", os.Stdin)
 	} else {
 		dbg.Printf("parsing file %q.", llPath)
 		module, err = asm.ParseFile(llPath)
@@ -129,7 +129,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 	// Get functions set by `-funcs` or all functions if `-funcs` not used.
 	var funcs []*ir.Function
 	for _, f := range module.Funcs {
-		if len(funcNames) > 0 && !funcNames[f.Name] {
+		if len(funcNames) > 0 && !funcNames[f.Name()] {
 			dbg.Printf("skipping function %q.", f.Name)
 			continue
 		}
@@ -152,7 +152,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 		g := cfg.NewGraphFromFunc(f)
 
 		// Store DOT graph.
-		if err := storeCFG(g, f.Name, dotDir, img); err != nil {
+		if err := storeCFG(g, f.Name(), dotDir, img); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -191,7 +191,7 @@ func createDotDir(llPath string, force bool) (string, error) {
 //    foo_graphs/bar.dot
 //    foo_graphs/baz.dot
 func storeCFG(g graph.Directed, funcName, dotDir string, img bool) error {
-	buf, err := dot.Marshal(g, fmt.Sprintf("%q", funcName), "", "\t", false)
+	buf, err := dot.Marshal(g, fmt.Sprintf("%q", funcName), "", "\t")
 	if err != nil {
 		return errors.WithStack(err)
 	}

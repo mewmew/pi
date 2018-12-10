@@ -18,7 +18,7 @@ func InitDFSOrder(g *Graph) {
 	// post-order
 	var walk func(n graph.Node)
 	first := 0
-	last := len(g.Nodes()) - 1
+	last := g.Nodes().Len() - 1
 	walk = func(n graph.Node) {
 		nn, ok := n.(*Node)
 		if !ok {
@@ -27,7 +27,7 @@ func InitDFSOrder(g *Graph) {
 		nn.Pre = first
 		first++
 		visited[n] = true
-		for _, succ := range sortByDOTID(g.From(n.ID())) {
+		for _, succ := range sortByDOTID(graph.NodesOf(g.From(n.ID()))) {
 			if !visited[succ] {
 				walk(succ)
 			}
@@ -37,7 +37,7 @@ func InitDFSOrder(g *Graph) {
 	}
 	walk(g.entry)
 	// Ensure that all nodes have been visited.
-	for _, n := range sortByDOTID(g.Nodes()) {
+	for _, n := range sortByDOTID(graph.NodesOf(g.Nodes())) {
 		if !visited[n] {
 			walk(n)
 		}

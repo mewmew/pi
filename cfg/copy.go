@@ -6,11 +6,16 @@ package cfg
 func Copy(dst, src *Graph) {
 	dst.id = src.id
 	nodes := src.Nodes()
-	for _, n := range nodes {
+	for nodes.Next() {
+		n := nodes.Node()
 		dst.AddNode(n)
 	}
-	for _, u := range nodes {
-		for _, v := range src.From(u.ID()) {
+	nodes.Reset()
+	for nodes.Next() {
+		u := nodes.Node()
+		from := src.From(u.ID())
+		for from.Next() {
+			v := from.Node()
 			dst.SetEdge(src.Edge(u.ID(), v.ID()))
 		}
 	}

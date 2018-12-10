@@ -55,7 +55,7 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 	// Force generate local IDs.
 	_ = f.String()
 	for i, block := range f.Blocks {
-		from := nodeWithName(g, block.Name)
+		from := nodeWithName(g, localIdent(block.LocalIdent))
 		if i == 0 {
 			// Store entry node.
 			g.SetEntry(from)
@@ -64,11 +64,11 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 		case *ir.TermRet:
 			// nothing to do.
 		case *ir.TermBr:
-			to := nodeWithName(g, term.Target.Name)
+			to := nodeWithName(g, localIdent(term.Target.LocalIdent))
 			edgeWithLabel(g, from, to, "")
 		case *ir.TermCondBr:
-			t := nodeWithName(g, term.TargetTrue.Name)
-			f := nodeWithName(g, term.TargetFalse.Name)
+			t := nodeWithName(g, localIdent(term.TargetTrue.LocalIdent))
+			f := nodeWithName(g, localIdent(term.TargetFalse.LocalIdent))
 			trueCond := term.Cond.Ident()
 			falseCond := fmt.Sprintf("!%v", trueCond)
 			edgeWithLabel(g, from, t, trueCond)
@@ -76,12 +76,12 @@ func NewGraphFromFunc(f *ir.Function) *Graph {
 		case *ir.TermSwitch:
 			var defaultConds []string
 			for _, c := range term.Cases {
-				to := nodeWithName(g, c.Target.Name)
+				to := nodeWithName(g, localIdent(c.Target.LocalIdent))
 				caseCond := fmt.Sprintf("%v == %v", term.X.Ident(), c.X.Ident())
 				edgeWithLabel(g, from, to, caseCond)
 				defaultConds = append(defaultConds, fmt.Sprintf("%v != %v", term.X.Ident(), c.X.Ident()))
 			}
-			to := nodeWithName(g, term.TargetDefault.Name)
+			to := nodeWithName(g, localIdent(term.TargetDefault.LocalIdent))
 			defaultCond := strings.Join(defaultConds, " && ")
 			edgeWithLabel(g, from, to, defaultCond)
 		case *ir.TermUnreachable:
@@ -123,7 +123,7 @@ func edgeWithLabel(g *Graph, from, to *Node, label string) *Edge {
 
 // String returns the string representation of the graph in Graphviz DOT format.
 func (g *Graph) String() string {
-	data, err := dot.Marshal(g, g.DOTID(), "", "\t", false)
+	data, err := dot.Marshal(g, g.DOTID(), "", "\t")
 	if err != nil {
 		panic(fmt.Errorf("unable to marshal control flow graph in DOT format; %v", err))
 	}
@@ -165,7 +165,7 @@ func (g *Graph) NodeWithName(name string) (*Node, bool) {
 
 // TrueTarget returns the target node of the true branch from n.
 func (g *Graph) TrueTarget(n *Node) *Node {
-	succs := g.From(n.ID())
+	succs := graph.NodesOf(g.From(n.ID()))
 	if len(succs) != 2 {
 		panic(fmt.Errorf("invalid number of successors; expected 2, got %d", len(succs)))
 	}
@@ -191,7 +191,7 @@ func (g *Graph) TrueTarget(n *Node) *Node {
 
 // FalseTarget returns the target node of the false branch from n.
 func (g *Graph) FalseTarget(n *Node) *Node {
-	succs := g.From(n.ID())
+	succs := graph.NodesOf(g.From(n.ID()))
 	if len(succs) != 2 {
 		panic(fmt.Errorf("invalid number of successors; expected 2, got %d", len(succs)))
 	}
@@ -217,7 +217,9 @@ func (g *Graph) FalseTarget(n *Node) *Node {
 
 // initNodes initializes the mapping between node names and graph nodes.
 func (g *Graph) initNodes() {
-	for _, n := range g.Nodes() {
+	nodes := g.Nodes()
+	for nodes.Next() {
+		n := nodes.Node()
 		nn := node(n)
 		if len(nn.name) == 0 {
 			panic(fmt.Errorf("invalid node; missing node name in %#v", nn))
@@ -307,10 +309,10 @@ func (g *Graph) SetEdge(e graph.Edge) {
 	}
 	// Add nodes if not yet present in graph.
 	from, to := ee.From(), ee.To()
-	if !g.Has(from.ID()) {
+	if g.Node(from.ID()) == nil {
 		g.AddNode(from)
 	}
-	if !g.Has(to.ID()) {
+	if g.Node(to.ID()) == nil {
 		g.AddNode(to)
 	}
 	// Add edge.
@@ -518,4 +520,12 @@ func (g *Graph) nodeWithName(name string) *Node {
 		panic(fmt.Errorf("unable to locate node with name %q", name))
 	}
 	return n
+}
+
+// localIdent returns the identifier (without '%' prefix) of the local
+// identifier.
+func localIdent(ident ir.LocalIdent) string {
+	const prefix = "%"
+	s := ident.Ident()
+	return s[len(prefix):]
 }
