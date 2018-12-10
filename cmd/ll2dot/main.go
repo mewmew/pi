@@ -130,7 +130,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 	var funcs []*ir.Function
 	for _, f := range module.Funcs {
 		if len(funcNames) > 0 && !funcNames[f.Name()] {
-			dbg.Printf("skipping function %q.", f.Name)
+			dbg.Printf("skipping function %q.", f.Name())
 			continue
 		}
 		funcs = append(funcs, f)
@@ -148,7 +148,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 		}
 
 		// Generate control flow graph.
-		dbg.Printf("parsing function %q.", f.Name)
+		dbg.Printf("parsing function %q.", f.Name())
 		g := cfg.NewGraphFromFunc(f)
 
 		// Store DOT graph.

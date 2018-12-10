@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"gonum.org/v1/gonum/graph"
 )
 
 func TestRoundTrip(t *testing.T) {
@@ -147,7 +149,9 @@ func TestInitDFSOrder(t *testing.T) {
 		InitDFSOrder(in)
 		// Check results.
 		got := make(map[string]int)
-		for _, n := range in.Nodes() {
+		nodes := in.Nodes()
+		for nodes.Next() {
+			n := nodes.Node()
 			nn, ok := n.(*Node)
 			if !ok {
 				panic(fmt.Errorf("invalid node type; expected *cfg.Node, got %T", n))
@@ -187,7 +191,7 @@ func TestSortByRevPost(t *testing.T) {
 		InitDFSOrder(in)
 		// Check results.
 		var got []string
-		for _, n := range SortByRevPost(in.Nodes()) {
+		for _, n := range SortByRevPost(graph.NodesOf(in.Nodes())) {
 			got = append(got, n.name)
 		}
 		if !reflect.DeepEqual(got, gold.want) {
