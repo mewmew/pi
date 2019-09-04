@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"bitbucket.org/zombiezen/cardcpx/natsort"
+	"github.com/mewkiz/pkg/natsort"
 	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/encoding/dot"
 )

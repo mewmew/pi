@@ -127,7 +127,7 @@ func ll2dot(llPath string, funcNames map[string]bool, force, img bool) error {
 	}
 
 	// Get functions set by `-funcs` or all functions if `-funcs` not used.
-	var funcs []*ir.Function
+	var funcs []*ir.Func
 	for _, f := range module.Funcs {
 		if len(funcNames) > 0 && !funcNames[f.Name()] {
 			dbg.Printf("skipping function %q.", f.Name())
